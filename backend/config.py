@@ -73,6 +73,7 @@ class Settings(BaseSettings):
         """Pydantic config."""
         env_file = ".env"
         case_sensitive = False
+        extra = "ignore"  # Ignore extra fields from .env
 
 
 # Global settings instance

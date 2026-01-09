@@ -123,7 +123,7 @@ class ScheduledTask(Base):
     is_active = Column(Boolean, default=True)
     last_run = Column(DateTime, nullable=True)
     next_run = Column(DateTime, nullable=True)
-    metadata = Column(JSON, nullable=True)  # Task-specific configuration
+    task_metadata = Column(JSON, nullable=True)  # Task-specific configuration
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
