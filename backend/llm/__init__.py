@@ -1,11 +1,14 @@
 """
 Initialize LLM package.
 """
-from .classifier import EmailClassifier
+try:
+    from .classifier import EmailClassifier
+except Exception:
+    EmailClassifier = None
 
 try:
     from .analyzer import DataAnalyzer, S3DataHandler
-except ImportError:
+except Exception:
     DataAnalyzer = None
     S3DataHandler = None
 

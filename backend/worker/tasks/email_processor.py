@@ -148,6 +148,13 @@ def fetch_and_process_emails(user_id: str, email_account_id: str, max_results: i
                     kwargs={"user_context": {"user_id": user_id}},
                 )
                 
+                # Step 7: Trigger recommendation generation (will run after classification)
+                from backend.worker.tasks.recommender import generate_recommendation
+                generate_recommendation.apply_async(
+                    args=(email_job.id,),
+                    kwargs={"user_context": {"user_id": user_id}},
+                    countdown=2,  # Wait 2 seconds for classification to complete
+                )
             except Exception as e:
                 logger.error(f"Failed to process email {email_data.get('message_id')}: {e}")
                 errors.append(f"Email processing failed: {str(e)}")

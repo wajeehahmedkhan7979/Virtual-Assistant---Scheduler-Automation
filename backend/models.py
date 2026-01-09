@@ -35,6 +35,7 @@ class User(Base):
     rules = relationship("AutoReplyRule", back_populates="user", cascade="all, delete-orphan")
     tasks = relationship("ScheduledTask", back_populates="user", cascade="all, delete-orphan")
     data_analysis_jobs = relationship("DataAnalysisJob", back_populates="user", cascade="all, delete-orphan")
+    action_recommendations = relationship("ActionRecommendation", back_populates="user", cascade="all, delete-orphan")
 
     __table_args__ = (Index("idx_user_email", "email"),)
 
@@ -114,6 +115,46 @@ class AutoReplyRule(Base):
     user = relationship("User", back_populates="rules")
 
     __table_args__ = (Index("idx_auto_reply_rule_user", "user_id"),)
+
+
+class ActionRecommendation(Base):
+    """Recommended actions for emails based on classification and rules."""
+    __tablename__ = "action_recommendations"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    email_job_id = Column(String, ForeignKey("email_jobs.id"), nullable=False, index=True)
+    
+    # Rule and trigger information
+    rule_id = Column(String, nullable=True)  # Which rule(s) triggered this
+    rule_names = Column(String, nullable=True)  # Comma-separated rule names
+    
+    # Recommended actions
+    recommended_actions = Column(JSON, nullable=False)  # List of action objects with reasoning
+    safety_flags = Column(JSON, nullable=True)  # Security/safety concerns
+    
+    # Evaluation info
+    confidence_score = Column(Integer, nullable=True)  # 0-100, how confident in recommendation
+    reasoning = Column(Text, nullable=True)  # Plain English explanation
+    
+    # Status tracking
+    status = Column(String, default="generated")  # generated, reviewed, accepted, rejected
+    accepted_at = Column(DateTime, nullable=True)
+    rejected_at = Column(DateTime, nullable=True)
+    rejection_reason = Column(Text, nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    user = relationship("User", back_populates="action_recommendations")
+    email_job = relationship("EmailJob")
+
+    __table_args__ = (
+        Index("idx_action_recommendation_user", "user_id"),
+        Index("idx_action_recommendation_email", "email_job_id"),
+        Index("idx_action_recommendation_status", "status"),
+    )
 
 
 class ScheduledTask(Base):

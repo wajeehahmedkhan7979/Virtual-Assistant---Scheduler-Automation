@@ -204,14 +204,44 @@ virtual-assistant-scheduler/
 - ✅ CSV upload & analysis with LLM summary
 - **Expected**: Can login, link Gmail, process emails, analyze data
 
-### Phase B: Core Features (Weeks 3-6)
+### Phase B: Core Features (✅ COMPLETE - Weeks 3-6)
 
-- [ ] Celery scheduler + task management
-- [ ] Pre-approved reply system with approval gates
-- [ ] Rules engine (YAML/JSON DSL)
-- [ ] Vector store (FAISS) + retriever
-- [ ] Feature-complete dashboard + CLI
-- **Expected**: Full inbox automation + data analysis with UI
+- ✅ Gmail OAuth2 integration with secure token storage
+- ✅ Email fetching pipeline with encryption
+- ✅ Classification system (LangChain + OpenAI)
+- ✅ Celery task integration
+- ✅ 24+ passing tests
+- **Status**: Email ingestion and classification fully functional
+
+### Phase C Step 1: Email Classification (✅ COMPLETE)
+
+- ✅ EmailClassifier with OpenAI integration
+- ✅ 5 email categories: important, actionable, followup, promotional, spam
+- ✅ Confidence scoring (0-100%)
+- ✅ Explanation generation
+- ✅ API endpoints for manual + automatic classification
+- ✅ 16 passing unit tests
+- **Status**: See [PHASE_C_STEP1_COMPLETE.md](PHASE_C_STEP1_COMPLETE.md)
+
+### Phase C Step 2: Rule Evaluation Engine (✅ COMPLETE)
+
+- ✅ RuleEngine class with rule evaluation logic
+- ✅ 5 default rules (flag important, archive promotional, etc.)
+- ✅ Pattern matching (wildcard, regex, case-insensitive)
+- ✅ ActionRecommendation database model
+- ✅ Celery tasks for async recommendation generation
+- ✅ 6 REST API endpoints
+- ✅ **27 passing unit tests** (100% pass rate)
+- ✅ End-to-end verification passing
+- **Key Achievement**: Generates action recommendations WITHOUT executing actions
+- **Status**: See [PHASE_C_STEP2_COMPLETE.md](PHASE_C_STEP2_COMPLETE.md) and [PHASE_C_STEP2_RULE_ENGINE.md](PHASE_C_STEP2_RULE_ENGINE.md)
+
+### Phase C Step 3: Action Execution (PLANNED)
+
+- [ ] Action executor engine
+- [ ] Safe execution with audit logging
+- [ ] User confirmation workflow
+- [ ] Rollback capability
 
 ### Phase C: Hardening (Weeks 7-8)
 

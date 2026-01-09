@@ -71,12 +71,16 @@ async def root():
 # Import and include routers
 from api.auth import router as auth_router
 from api.email import router as email_router
+from api.recommendation import router as recommendation_router
 
 # Include authentication routes
 app.include_router(auth_router)
 
 # Include email routes
 app.include_router(email_router)
+
+# Include recommendation routes
+app.include_router(recommendation_router)
 
 # Placeholder for future routers
 # from api.jobs import router as jobs_router
