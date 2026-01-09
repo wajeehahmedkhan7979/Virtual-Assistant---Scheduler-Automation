@@ -1,0 +1,541 @@
+{
+  "project_name": "AI Agent: Virtual Assistant & Task Scheduler",
+  "version": "0.1.0-mvp",
+  "overview": "Deployable AI agent combining conversational assistance with reliable task scheduling for intelligent inbox management and data analysis",
+
+  "todo_list": [
+    {
+      "id": "A.1.1",
+      "phase": "A",
+      "title": "Create git repo and initialize project",
+      "description": "Set up GitHub repo, add README, .gitignore, project structure",
+      "prereqs": [],
+      "expected_output": "GitHub repo with clean git history, .gitignore configured",
+      "priority": "critical"
+    },
+    {
+      "id": "A.1.2",
+      "phase": "A",
+      "title": "Create Python virtual environment",
+      "description": "Initialize venv, install requirements.txt dependencies",
+      "prereqs": ["A.1.1"],
+      "expected_output": "venv/ folder, all packages installed",
+      "priority": "critical"
+    },
+    {
+      "id": "A.1.3",
+      "phase": "A",
+      "title": "Create requirements.txt",
+      "description": "FastAPI, SQLAlchemy, Celery, LangChain, OpenAI, cryptography, psycopg2",
+      "prereqs": ["A.1.1"],
+      "expected_output": "requirements.txt with all dependencies pinned",
+      "priority": "critical"
+    },
+    {
+      "id": "A.1.4",
+      "phase": "A",
+      "title": "Create .env.example and .env",
+      "description": "Template for all environment variables needed",
+      "prereqs": ["A.1.1"],
+      "expected_output": ".env.example with all required vars documented",
+      "priority": "critical"
+    },
+    {
+      "id": "A.1.5",
+      "phase": "A",
+      "title": "Create Dockerfile and docker-compose.yml",
+      "description": "Multi-stage Dockerfile, compose with postgres, redis, backend, worker, frontend",
+      "prereqs": ["A.1.1"],
+      "expected_output": "Dockerfile, docker-compose.yml - test with 'docker-compose up'",
+      "priority": "critical"
+    },
+    {
+      "id": "A.2.1",
+      "phase": "A",
+      "title": "Create FastAPI main app",
+      "description": "backend/main.py with /health endpoint, CORS middleware, router includes",
+      "prereqs": ["A.1.1", "A.1.2"],
+      "expected_output": "backend/main.py runs, /health returns 200",
+      "priority": "critical"
+    },
+    {
+      "id": "A.2.2",
+      "phase": "A",
+      "title": "Create config.py for env var loading",
+      "description": "Use pydantic Settings to load .env variables",
+      "prereqs": ["A.1.4"],
+      "expected_output": "backend/config.py, Settings class with all vars",
+      "priority": "critical"
+    },
+    {
+      "id": "A.2.3",
+      "phase": "A",
+      "title": "Create Postgres schema (models.py)",
+      "description": "User, UserEmailAccount, EmailJob, Task, AuditLog, Template, Rule",
+      "prereqs": ["A.2.2"],
+      "expected_output": "backend/models.py with SQLAlchemy ORM classes",
+      "priority": "critical"
+    },
+    {
+      "id": "A.2.4",
+      "phase": "A",
+      "title": "Create database.py with session factory",
+      "description": "SQLAlchemy engine, sessionmaker, Base",
+      "prereqs": ["A.2.2"],
+      "expected_output": "backend/database.py - verify tables created on startup",
+      "priority": "critical"
+    },
+    {
+      "id": "A.2.5",
+      "phase": "A",
+      "title": "Create encryption utilities",
+      "description": "backend/security/encryption.py - Fernet-based token encryption",
+      "prereqs": ["A.2.2"],
+      "expected_output": "Encrypt/decrypt functions, round-trip test passes",
+      "priority": "high"
+    },
+    {
+      "id": "A.3.1",
+      "phase": "A",
+      "title": "Create auth endpoints (/register, /login, /logout)",
+      "description": "backend/api/auth.py with user registration and login",
+      "prereqs": ["A.2.1", "A.2.3", "A.2.4"],
+      "expected_output": "Can register user, login, receive JWT token",
+      "priority": "critical"
+    },
+    {
+      "id": "A.4.1",
+      "phase": "A",
+      "title": "Create BaseEmailConnector interface",
+      "description": "backend/connectors/base.py with abstract methods",
+      "prereqs": ["A.1.2"],
+      "expected_output": "base.py with EmailConnector ABC",
+      "priority": "high"
+    },
+    {
+      "id": "A.4.2",
+      "phase": "A",
+      "title": "Create email adapter implementations",
+      "description": "GmailConnector, OutlookConnector, IMAPConnector stubs",
+      "prereqs": ["A.4.1"],
+      "expected_output": "backend/connectors/email_adapters.py",
+      "priority": "high"
+    },
+    {
+      "id": "A.4.3",
+      "phase": "A",
+      "title": "Create connector factory",
+      "description": "backend/connectors/factory.py for creating connectors by type",
+      "prereqs": ["A.4.1", "A.4.2"],
+      "expected_output": "Factory pattern implementation, register adapters",
+      "priority": "high"
+    },
+    {
+      "id": "A.4.4",
+      "phase": "A",
+      "title": "Implement Gmail OAuth2 flow",
+      "description": "OAuth authorize + callback endpoints, token exchange",
+      "prereqs": ["A.3.1", "A.4.4"],
+      "expected_output": "/api/email/oauth-authorize, /api/email/oauth-callback working",
+      "priority": "critical"
+    },
+    {
+      "id": "A.4.5",
+      "phase": "A",
+      "title": "Test email linking with Gmail account",
+      "description": "End-to-end test with real Gmail sandbox account",
+      "prereqs": ["A.4.4", "A.2.5"],
+      "expected_output": "Token encrypted and stored in DB, can decrypt",
+      "priority": "critical"
+    },
+    {
+      "id": "A.5.1",
+      "phase": "A",
+      "title": "Create Celery app and config",
+      "description": "backend/worker/celery_app.py with Redis broker",
+      "prereqs": ["A.1.2", "A.2.2"],
+      "expected_output": "Celery app initialized, can register tasks",
+      "priority": "critical"
+    },
+    {
+      "id": "A.5.2",
+      "phase": "A",
+      "title": "Create email processor task",
+      "description": "backend/worker/tasks/email_processor.py stub",
+      "prereqs": ["A.5.1"],
+      "expected_output": "Task file created, process_email() function defined",
+      "priority": "high"
+    },
+    {
+      "id": "A.5.3",
+      "phase": "A",
+      "title": "Implement email fetch via Gmail API",
+      "description": "Use Gmail connector to fetch unread emails",
+      "prereqs": ["A.5.2", "A.4.5"],
+      "expected_output": "Can fetch 10 unread emails from Gmail",
+      "priority": "critical"
+    },
+    {
+      "id": "A.5.4",
+      "phase": "A",
+      "title": "Create embeddings utility",
+      "description": "backend/llm/embeddings.py - OpenAI text-embedding-3-small",
+      "prereqs": ["A.2.2"],
+      "expected_output": "Function to embed text, returns vector",
+      "priority": "high"
+    },
+    {
+      "id": "A.5.5",
+      "phase": "A",
+      "title": "Create FAISS vector store",
+      "description": "backend/storage/vector_store.py - index builder and query",
+      "prereqs": ["A.5.4"],
+      "expected_output": "FAISS index created, can add/query embeddings",
+      "priority": "high"
+    },
+    {
+      "id": "A.5.6",
+      "phase": "A",
+      "title": "Create LangChain classifier chain",
+      "description": "backend/llm/classifier_chain.py - categorize emails",
+      "prereqs": ["A.5.4", "A.2.2"],
+      "expected_output": "Chain returns category + confidence score",
+      "priority": "critical"
+    },
+    {
+      "id": "A.5.7",
+      "phase": "A",
+      "title": "Implement email classification in processor",
+      "description": "Use embeddings and classifier chain",
+      "prereqs": ["A.5.2", "A.5.6"],
+      "expected_output": "Email gets labeled (work/personal/spam) with score",
+      "priority": "critical"
+    },
+    {
+      "id": "A.5.8",
+      "phase": "A",
+      "title": "Add process endpoint",
+      "description": "POST /api/emails/process to trigger processor task",
+      "prereqs": ["A.5.7"],
+      "expected_output": "Can call endpoint, task enqueued to Celery",
+      "priority": "high"
+    },
+    {
+      "id": "A.6.1",
+      "phase": "A",
+      "title": "Create data connector interface",
+      "description": "backend/connectors/data_adapters.py - BaseDataConnector",
+      "prereqs": ["A.4.1"],
+      "expected_output": "CSV, GoogleSheets, S3 adapters as stubs",
+      "priority": "high"
+    },
+    {
+      "id": "A.6.2",
+      "phase": "A",
+      "title": "Create data analysis task",
+      "description": "backend/worker/tasks/data_analysis.py",
+      "prereqs": ["A.5.1", "A.6.1"],
+      "expected_output": "Task reads CSV, computes basic stats",
+      "priority": "high"
+    },
+    {
+      "id": "A.6.3",
+      "phase": "A",
+      "title": "Implement CSV upload endpoint",
+      "description": "POST /api/data/upload with file",
+      "prereqs": ["A.5.1"],
+      "expected_output": "File accepted, stored, task enqueued",
+      "priority": "high"
+    },
+    {
+      "id": "A.6.4",
+      "phase": "A",
+      "title": "Implement analysis worker job",
+      "description": "Read CSV, run stats, generate LLM summary",
+      "prereqs": ["A.6.2", "A.5.4"],
+      "expected_output": "CSV analyzed, summary generated",
+      "priority": "high"
+    },
+    {
+      "id": "A.6.5",
+      "phase": "A",
+      "title": "Store and return analysis results",
+      "description": "Save to DB, upload report to S3",
+      "prereqs": ["A.6.4"],
+      "expected_output": "Can download report, see summary in UI",
+      "priority": "high"
+    },
+    {
+      "id": "A.7.1",
+      "phase": "A",
+      "title": "Initialize Next.js frontend app",
+      "description": "npx create-next-app@latest + TailwindCSS",
+      "prereqs": ["A.1.1"],
+      "expected_output": "frontend/ folder with Next.js structure",
+      "priority": "medium"
+    },
+    {
+      "id": "A.7.2",
+      "phase": "A",
+      "title": "Create dashboard home page",
+      "description": "pages/index.tsx with navigation",
+      "prereqs": ["A.7.1"],
+      "expected_output": "Home page with links to inbox, analysis, templates",
+      "priority": "medium"
+    },
+    {
+      "id": "A.8.1",
+      "phase": "A",
+      "title": "Write README.md",
+      "description": "Overview, features, quick start, setup instructions",
+      "prereqs": ["A.1.1"],
+      "expected_output": "README.md with clear instructions",
+      "priority": "high"
+    },
+    {
+      "id": "A.8.2",
+      "phase": "A",
+      "title": "Write SETUP.md",
+      "description": "Step-by-step local development setup",
+      "prereqs": ["A.1.1"],
+      "expected_output": "SETUP.md with env vars, migrations, running locally",
+      "priority": "high"
+    },
+    {
+      "id": "A.8.3",
+      "phase": "A",
+      "title": "Create basic auth tests",
+      "description": "tests/test_auth.py - register, login, logout",
+      "prereqs": ["A.3.1"],
+      "expected_output": "Tests pass: pytest tests/test_auth.py",
+      "priority": "medium"
+    },
+    {
+      "id": "A.8.4",
+      "phase": "A",
+      "title": "Create email processor tests",
+      "description": "tests/test_email_processor.py - fetch, classify",
+      "prereqs": ["A.5.7"],
+      "expected_output": "Tests pass: pytest tests/test_email_processor.py",
+      "priority": "medium"
+    },
+    {
+      "id": "A.8.5",
+      "phase": "A",
+      "title": "End-to-end MVP test",
+      "description": "Full flow: register → login → link email → process emails",
+      "prereqs": ["A.8.4"],
+      "expected_output": "Can complete all steps without errors",
+      "priority": "critical"
+    }
+  ],
+
+  "file_structure": {
+    "root": {
+      "structure": [
+        ".github/workflows/ci.yml (GitHub Actions CI/CD)",
+        ".gitignore",
+        ".env.example (environment template)",
+        "docker-compose.yml (local dev stack)",
+        "Dockerfile (backend image)",
+        "requirements.txt (Python dependencies)",
+        "pyproject.toml (project metadata)",
+        "README.md (main documentation)",
+        "SETUP.md (local setup guide)",
+        "DEPLOYMENT.md (production guide)",
+        "ARCHITECTURE.md (system design)",
+        "",
+        "backend/",
+        "├── __init__.py",
+        "├── main.py (FastAPI app entry point)",
+        "├── config.py (environment config)",
+        "├── models.py (SQLAlchemy ORM models)",
+        "├── database.py (session factory)",
+        "├── api/",
+        "│   ├── __init__.py",
+        "│   ├── auth.py (login/register endpoints)",
+        "│   ├── email.py (email linking, processing)",
+        "│   ├── jobs.py (job status endpoints)",
+        "│   └── templates.py (template CRUD)",
+        "├── connectors/",
+        "│   ├── __init__.py",
+        "│   ├── base.py (BaseEmailConnector ABC)",
+        "│   ├── email_adapters.py (Gmail, Outlook, IMAP)",
+        "│   ├── data_adapters.py (CSV, Sheets, S3, SQL)",
+        "│   └── factory.py (connector factory pattern)",
+        "├── llm/",
+        "│   ├── __init__.py",
+        "│   ├── embeddings.py (OpenAI embeddings)",
+        "│   └── classifier_chain.py (LangChain chain)",
+        "├── storage/",
+        "│   ├── __init__.py",
+        "│   ├── vector_store.py (FAISS index)",
+        "│   └── s3_client.py (S3 object storage)",
+        "├── engine/",
+        "│   ├── __init__.py",
+        "│   └── rules_engine.py (YAML/JSON rules)",
+        "├── security/",
+        "│   ├── __init__.py",
+        "│   ├── encryption.py (token encryption)",
+        "│   └── jwt.py (JWT auth utilities)",
+        "├── worker/",
+        "│   ├── __init__.py",
+        "│   ├── celery_app.py (Celery config)",
+        "│   └── tasks/",
+        "│       ├── __init__.py",
+        "│       ├── email_processor.py (fetch, classify, route)",
+        "│       ├── auto_reply.py (send pre-approved replies)",
+        "│       └── data_analysis.py (analyze datasets)",
+        "",
+        "frontend/",
+        "├── public/ (static assets)",
+        "├── pages/",
+        "│   ├── index.tsx (dashboard home)",
+        "│   ├── login.tsx (auth page)",
+        "│   ├── inbox.tsx (email list + classify)",
+        "│   ├── analysis.tsx (data upload + results)",
+        "│   ├── templates.tsx (template manager)",
+        "│   └── rules.tsx (rule builder)",
+        "├── components/ (React components)",
+        "│   ├── Header.tsx",
+        "│   ├── Sidebar.tsx",
+        "│   └── ...",
+        "├── lib/",
+        "│   ├── api.ts (API client utilities)",
+        "│   └── auth.ts (auth helpers)",
+        "├── styles/ (TailwindCSS)",
+        "├── package.json",
+        "└── tsconfig.json",
+        "",
+        "tests/",
+        "├── test_auth.py",
+        "├── test_email_processor.py",
+        "├── test_rules_engine.py",
+        "├── test_data_analysis.py",
+        "├── test_auto_reply.py",
+        "└── test_acceptance.py",
+        "",
+        "docs/",
+        "├── ADMIN_RUNBOOK.md (operations guide)",
+        "├── API_DOCUMENTATION.md (endpoint docs)",
+        "├── COST_ANALYSIS.md (pricing breakdown)",
+        "└── SECURITY.md (compliance & security)"
+      ]
+    }
+  },
+
+  "scaffold_commands": [
+    "mkdir -p virtual-assistant-scheduler && cd virtual-assistant-scheduler",
+    "git init",
+    "python -m venv venv",
+    "source venv/bin/activate",
+    "mkdir -p backend/{api,connectors,llm,security,storage,engine,worker/tasks}",
+    "mkdir -p frontend/pages frontend/components frontend/lib frontend/styles",
+    "mkdir -p tests docs",
+    "touch backend/__init__.py backend/main.py backend/config.py backend/models.py backend/database.py",
+    "touch requirements.txt .env.example docker-compose.yml Dockerfile README.md",
+    "pip install fastapi uvicorn sqlalchemy psycopg2-binary celery redis langchain openai cryptography python-dotenv pydantic",
+    "docker-compose up --build",
+    "pytest tests/ -v"
+  ],
+
+  "pr_checklist": [
+    "Code passes linting (black, flake8, mypy)",
+    "All tests pass (pytest) with 80%+ coverage",
+    "No hardcoded secrets or credentials",
+    "No SQL injection or XSS vulnerabilities",
+    "API endpoints properly authenticated and authorized",
+    "Database migrations created (if schema changed)",
+    "Docstrings and comments for complex logic",
+    "docker-compose.yml updated if services changed",
+    ".env.example updated with new variables",
+    "At least 1 code review approval",
+    "CI/CD pipeline passes (GitHub Actions)",
+    "Commits have meaningful messages"
+  ],
+
+  "release_checklist": [
+    "All acceptance tests pass (6/6)",
+    "Manual smoke test on staging",
+    "Database backups taken",
+    "Security audit passed",
+    "Vulnerability scan clean",
+    "Load testing completed",
+    "README and documentation up-to-date",
+    "SETUP.md, DEPLOYMENT.md, ADMIN_RUNBOOK.md complete",
+    "API documentation complete",
+    "Monitoring and alerts configured",
+    "HTTPS/TLS enabled",
+    "Token encryption verified",
+    "Audit logging tested",
+    "GDPR compliance implemented",
+    "Release notes and changelog updated",
+    "Docker images tagged and pushed",
+    "Git tag created (e.g., v0.1.0)",
+    "Stakeholder sign-off received"
+  ],
+
+  "handoff_checklist": {
+    "deliverables": [
+      "Git repository with clean history",
+      "Tagged release version (v0.1.0)",
+      "Docker image in registry",
+      "SETUP.md (local development guide)",
+      "DEPLOYMENT.md (production guide)",
+      "ADMIN_RUNBOOK.md (operations manual)",
+      "API_DOCUMENTATION.md (endpoint reference)",
+      "ARCHITECTURE.md (system design)",
+      "COST_ANALYSIS.md (pricing & infrastructure)",
+      "SECURITY.md (compliance & security)",
+      "Demo script (tested & working)",
+      "Acceptance test results",
+      "Presentation slides"
+    ],
+    "demo_script": [
+      "Show user login and registration (2 min)",
+      "Link Gmail account via OAuth (3 min)",
+      "Process test emails and show classification (3 min)",
+      "Approve template and trigger auto-reply (4 min)",
+      "Upload CSV and run data analysis (3 min)",
+      "Show logs and audit trail (2 min)"
+    ],
+    "acceptance_tests": [
+      "1. User login & OAuth email linking",
+      "2. Email batch processing & classification",
+      "3. Pre-approved template & auto-reply",
+      "4. Follow-up task scheduling",
+      "5. Data-analysis job end-to-end",
+      "6. Audit log verification"
+    ],
+    "handoff_call": {
+      "duration": "45 minutes",
+      "agenda": [
+        "System overview (15 min)",
+        "Live demo (20 min)",
+        "Operations & support (10 min)"
+      ]
+    }
+  },
+
+  "cost_summary": {
+    "monthly_mvp": {
+      "compute": 12,
+      "database": 15,
+      "cache": 15,
+      "storage": 5,
+      "llm": 3,
+      "monitoring": 0,
+      "total": 50
+    },
+    "annual_mvp": 600,
+    "monthly_scale": {
+      "compute": 50,
+      "database": 40,
+      "cache": 50,
+      "storage": 20,
+      "llm": 28,
+      "monitoring": 50,
+      "total": 238
+    }
+  }
+}
