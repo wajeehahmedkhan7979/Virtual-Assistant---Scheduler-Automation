@@ -42,6 +42,20 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-3.5-turbo"
     openai_temperature: float = 0.7
+    
+    # Email Classification Categories (as JSON string)
+    # Default categories if not provided
+    email_categories: str = (
+        '{'
+        '"important": "Time-sensitive or high-priority emails requiring immediate attention",'
+        '"actionable": "Contains tasks or action items that need to be completed",'
+        '"followup": "Requires a follow-up response or action from the recipient",'
+        '"informational": "For reference only, no action required",'
+        '"spam": "Unsolicited or unwanted messages",'
+        '"promotional": "Marketing, newsletters, or promotional content"'
+        '}'
+    )
+    classification_confidence_threshold: float = 0.6  # Min confidence to store classification
 
     # Gmail OAuth2
     gmail_client_id: str = ""

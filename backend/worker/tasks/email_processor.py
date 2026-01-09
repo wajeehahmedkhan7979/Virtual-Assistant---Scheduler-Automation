@@ -141,8 +141,12 @@ def fetch_and_process_emails(user_id: str, email_account_id: str, max_results: i
                 emails_processed += 1
                 logger.debug(f"Created EmailJob {email_job.id} for {email_job.subject}")
                 
-                # Step 6: Trigger classification task (to be implemented in next phase)
-                # classify_email.delay(email_job.id)
+                # Step 6: Trigger classification task
+                from backend.worker.tasks.classifier import classify_email
+                classify_email.apply_async(
+                    args=(email_job.id,),
+                    kwargs={"user_context": {"user_id": user_id}},
+                )
                 
             except Exception as e:
                 logger.error(f"Failed to process email {email_data.get('message_id')}: {e}")

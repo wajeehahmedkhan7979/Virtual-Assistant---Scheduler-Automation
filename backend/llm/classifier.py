@@ -1,84 +1,221 @@
 """
-Email classification using LLM.
-Classifies emails into categories using OpenAI GPT models.
+Email classification using LangChain + OpenAI.
+Classifies emails into user-configurable categories.
 """
 import logging
-from typing import Optional
-from enum import Enum
+import json
+from typing import Optional, Dict, Any
+from datetime import datetime
+
+from langchain_openai import ChatOpenAI
+from backend.config import settings
 
 logger = logging.getLogger(__name__)
-
-
-class EmailCategory(str, Enum):
-    """Email classification categories."""
-    
-    IMPORTANT = "important"
-    ACTIONABLE = "actionable"
-    FOLLOWUP = "followup"
-    INFORMATIONAL = "informational"
-    SPAM = "spam"
-    PROMOTIONAL = "promotional"
 
 
 class EmailClassifier:
     """
     Classify emails using LangChain + OpenAI.
     
-    Determines email importance, action required, follow-up needed, etc.
+    Categorizes emails based on configurable categories and returns:
+    - category: Primary email category
+    - confidence: Classification confidence (0-1)
+    - explanation: Short explanation of classification
     """
 
-    def __init__(self, model: str = "gpt-3.5-turbo", temperature: float = 0.3):
+    def __init__(self, model: str = None, temperature: float = None):
         """
         Initialize email classifier.
         
         Args:
-            model: OpenAI model to use
-            temperature: Model temperature (0-1, lower = deterministic)
+            model: OpenAI model to use (default from config)
+            temperature: Model temperature (default from config)
         """
-        self.model = model
-        self.temperature = temperature
-        # LangChain setup to be implemented in Phase B
+        self.model = model or settings.openai_model
+        self.temperature = temperature if temperature is not None else settings.openai_temperature
+        self.confidence_threshold = settings.classification_confidence_threshold
+        
+        # Load categories from config
+        try:
+            self.categories = json.loads(settings.email_categories)
+            logger.info(f"Loaded {len(self.categories)} email categories")
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse email_categories config: {e}")
+            self.categories = {
+                "important": "Time-sensitive or high-priority emails",
+                "actionable": "Contains tasks or action items",
+                "followup": "Requires a follow-up response",
+                "informational": "For reference only",
+                "spam": "Unsolicited or unwanted messages",
+                "promotional": "Marketing or promotional content",
+            }
+        
+        # Initialize LangChain chat model
+        if not settings.openai_api_key:
+            logger.warning("OPENAI_API_KEY not set. Classification will fail.")
+            self.llm = None
+        else:
+            self.llm = ChatOpenAI(
+                model_name=self.model,
+                temperature=self.temperature,
+                api_key=settings.openai_api_key,
+            )
 
     def classify(
         self,
         sender: str,
         subject: str,
         body: str,
-        user_context: Optional[dict] = None,
-    ) -> dict:
+        user_context: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         """
         Classify an email.
         
         Args:
             sender: Email sender address
-            subject: Email subject
-            body: Email body text
-            user_context: Optional user preferences for classification
+            subject: Email subject line
+            body: Email body text (truncated to 2000 chars)
+            user_context: Optional dict with user preferences
             
         Returns:
             Dictionary with:
-            - category: Primary email category
-            - confidence: Classification confidence (0-1)
-            - should_flag: Whether email should be flagged
-            - action_needed: What action is needed (if any)
-            - summary: Brief summary of email
+            - category: Primary category (str, one of self.categories.keys())
+            - confidence: Confidence score (float, 0-1)
+            - explanation: Short explanation (str, plain text)
         """
-        # To be implemented in Phase B
-        # Use LangChain prompt chain to classify
-        raise NotImplementedError("To be implemented in Phase B")
+        if not self.llm:
+            raise ValueError("OpenAI API key not configured")
+        
+        # Truncate body to prevent token overload
+        body_truncated = body[:2000] if body else ""
+        
+        # Build category descriptions for prompt
+        category_list = "\n".join(
+            [f"- {cat}: {desc}" for cat, desc in self.categories.items()]
+        )
+        
+        # Create prompt
+        prompt_text = f"""You are an email classification assistant. Classify the following email into ONE of these categories:
+
+{category_list}
+
+Email Details:
+From: {sender}
+Subject: {subject}
+Body: {body_truncated}
+
+Respond with a JSON object containing:
+- "category": The category name (must be one of the listed categories)
+- "confidence": A confidence score from 0.0 to 1.0
+- "explanation": A brief (one sentence) explanation of why you chose this category
+
+IMPORTANT: Respond ONLY with valid JSON, no other text."""
+        
+        try:
+            # Call LLM
+            response = self.llm.predict(prompt_text)
+            
+            # Parse response
+            classification = self._parse_classification_response(response)
+            logger.debug(f"Classified email from {sender}: {classification['category']} (confidence: {classification['confidence']})")
+            
+            return classification
+            
+        except Exception as e:
+            logger.error(f"Classification error for email from {sender}: {e}")
+            # Return safe default
+            return {
+                "category": "informational",
+                "confidence": 0.5,
+                "explanation": "Classification failed, defaulting to informational",
+            }
+
+    def _parse_classification_response(self, response: str) -> Dict[str, Any]:
+        """
+        Parse LLM response JSON.
+        
+        Args:
+            response: LLM response (should be JSON)
+            
+        Returns:
+            Dictionary with category, confidence, explanation
+        """
+        try:
+            # Try to extract JSON from response
+            data = json.loads(response)
+            
+            # Validate fields
+            category = data.get("category", "informational")
+            confidence = float(data.get("confidence", 0.5))
+            explanation = str(data.get("explanation", ""))
+            
+            # Validate category is known
+            if category not in self.categories:
+                logger.warning(f"Unknown category from LLM: {category}, using informational")
+                category = "informational"
+            
+            # Clamp confidence to 0-1
+            confidence = max(0.0, min(1.0, confidence))
+            
+            return {
+                "category": category,
+                "confidence": confidence,
+                "explanation": explanation[:200],  # Limit explanation length
+            }
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse classification response as JSON: {e}")
+            logger.debug(f"Response was: {response}")
+            raise ValueError("Invalid classification response format")
+
+    def batch_classify(
+        self,
+        emails: list[Dict[str, str]],
+        user_context: Optional[Dict[str, Any]] = None,
+    ) -> list[Dict[str, Any]]:
+        """
+        Classify multiple emails.
+        
+        Args:
+            emails: List of dicts with sender, subject, body
+            user_context: Optional user context
+            
+        Returns:
+            List of classification results
+        """
+        results = []
+        for email in emails:
+            try:
+                result = self.classify(
+                    sender=email.get("sender", ""),
+                    subject=email.get("subject", ""),
+                    body=email.get("body", ""),
+                    user_context=user_context,
+                )
+                results.append(result)
+            except Exception as e:
+                logger.error(f"Failed to classify email: {e}")
+                results.append({
+                    "category": "informational",
+                    "confidence": 0.0,
+                    "explanation": "Classification failed",
+                })
+        
+        return results
 
     def extract_action_items(self, body: str) -> list:
         """
-        Extract action items/tasks from email body.
+        Extract action items from email body.
         
         Args:
             body: Email body text
             
         Returns:
-            List of action items
+            List of action item strings
         """
-        # To be implemented in Phase B
-        raise NotImplementedError("To be implemented in Phase B")
+        # To be implemented in Phase C (not part of MVP)
+        logger.info("extract_action_items not yet implemented")
+        return []
 
     def suggest_reply(
         self,
@@ -87,7 +224,7 @@ class EmailClassifier:
         body: str,
     ) -> Optional[str]:
         """
-        Generate suggested reply to an email.
+        Generate suggested reply to email.
         
         Args:
             sender: Email sender
@@ -95,125 +232,8 @@ class EmailClassifier:
             body: Email body
             
         Returns:
-            Suggested reply text, or None if no reply suggested
+            Suggested reply text, or None
         """
-        # To be implemented in Phase B
-        raise NotImplementedError("To be implemented in Phase B")
-
-    def batch_classify(self, emails: list) -> list:
-        """
-        Classify multiple emails at once.
-        
-        Args:
-            emails: List of email dictionaries
-            
-        Returns:
-            List of classified email dictionaries
-        """
-        # To be implemented in Phase B
-        # Use batch processing for efficiency
-        raise NotImplementedError("To be implemented in Phase B")
-
-
-class AutoReplyRuleEngine:
-    """
-    Execute auto-reply rules based on email classification.
-    
-    Applies user-configured rules to send automatic replies.
-    """
-
-    def __init__(self):
-        """Initialize auto-reply rule engine."""
-        # To be implemented in Phase B
-        pass
-
-    def evaluate_rules(
-        self,
-        user_id: str,
-        classification: dict,
-        sender: str,
-        subject: str,
-    ) -> Optional[dict]:
-        """
-        Evaluate user's auto-reply rules against email.
-        
-        Args:
-            user_id: User ID
-            classification: Email classification result
-            sender: Email sender
-            subject: Email subject
-            
-        Returns:
-            Auto-reply action, or None if no rule matches
-            
-        Example return value:
-            {
-                "rule_id": "rule-123",
-                "reply_text": "Thank you for your email...",
-                "should_send": True
-            }
-        """
-        # To be implemented in Phase B
-        raise NotImplementedError("To be implemented in Phase B")
-
-    def parse_rule_config(self, rule_config: dict) -> dict:
-        """
-        Parse user's rule configuration DSL.
-        
-        Args:
-            rule_config: JSON rule configuration
-            
-        Returns:
-            Parsed rule with conditions and actions
-            
-        Example rule config:
-            {
-                "name": "Auto-reply to newsletter",
-                "conditions": {
-                    "category": ["promotional"],
-                    "from": ["newsletter@example.com"]
-                },
-                "actions": {
-                    "archive": True,
-                    "skip_notification": True
-                }
-            }
-        """
-        # To be implemented in Phase B
-        raise NotImplementedError("To be implemented in Phase B")
-
-    def match_conditions(self, conditions: dict, email_data: dict) -> bool:
-        """
-        Check if email matches rule conditions.
-        
-        Args:
-            conditions: Rule conditions
-            email_data: Email data (sender, subject, category, etc.)
-            
-        Returns:
-            True if email matches conditions
-        """
-        # To be implemented in Phase B
-        raise NotImplementedError("To be implemented in Phase B")
-
-    def execute_actions(
-        self,
-        user_id: str,
-        actions: dict,
-        email_id: str,
-        connector,
-    ) -> bool:
-        """
-        Execute actions on matched email.
-        
-        Args:
-            user_id: User ID
-            actions: Actions to execute
-            email_id: Email ID
-            connector: Email connector (Gmail, Outlook, etc.)
-            
-        Returns:
-            Success status
-        """
-        # To be implemented in Phase B
-        raise NotImplementedError("To be implemented in Phase B")
+        # To be implemented in Phase C (not part of MVP)
+        logger.info("suggest_reply not yet implemented")
+        return None

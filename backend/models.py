@@ -77,11 +77,14 @@ class EmailJob(Base):
     sender = Column(String, nullable=True)
     body = Column(Text, nullable=True)
     classification = Column(String, nullable=True)  # important, spam, followup, etc.
+    classification_confidence = Column(Integer, nullable=True)  # 0-100 confidence score (stored as int percentage)
+    classification_explanation = Column(Text, nullable=True)  # Explanation of classification
     is_flagged = Column(Boolean, default=False)
     auto_reply_sent = Column(Boolean, default=False)
     is_processed = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     processed_at = Column(DateTime, nullable=True)
+    classified_at = Column(DateTime, nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="email_jobs")
@@ -90,6 +93,7 @@ class EmailJob(Base):
     __table_args__ = (
         Index("idx_email_job_user", "user_id"),
         Index("idx_email_job_processed", "is_processed"),
+        Index("idx_email_job_classification", "classification"),
     )
 
 
